@@ -10,12 +10,8 @@ def setup_database():
     """Create FlightVault database with system-versioned tables"""
     
     try:
-        conn = mariadb.connect(
-            user="root",
-            password="password",
-            host="localhost",
-            port=3306
-        )
+        from src.config import DATABASE_CONFIG
+        conn = mariadb.connect(**DATABASE_CONFIG)
         cursor = conn.cursor()
         
         print("🔧 Creating FlightVault database...")

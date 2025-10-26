@@ -4,7 +4,7 @@ Diff Analyzer - Compare timestamps and detect changes
 
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional
-from core.temporal_engine import TemporalEngine
+from src.core.temporal_engine import TemporalEngine
 
 class DiffAnalyzer:
     """Analyze differences between timestamps"""

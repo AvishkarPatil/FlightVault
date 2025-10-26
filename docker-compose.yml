@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  mariadb:
+    image: mariadb:10.11
+    environment:
+      MYSQL_ROOT_PASSWORD: flightvault123
+      MYSQL_DATABASE: flightvault
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    command: --default-time-zone='+00:00'
+
+  flightvault:
+    build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mariadb
+    environment:
+      - DB_HOST=mariadb
+      - DB_USER=root
+      - DB_PASSWORD=flightvault123
+      - DB_NAME=flightvault
+    volumes:
+      - ./data:/app/data
+
+volumes:
+  mariadb_data:

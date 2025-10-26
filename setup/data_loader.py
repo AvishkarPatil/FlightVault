@@ -12,13 +12,8 @@ def load_data():
     """Load OpenFlights data"""
     
     try:
-        conn = mariadb.connect(
-            user="root",
-            password="password",
-            host="localhost",
-            port=3306,
-            database="flightvault"
-        )
+        from src.config import DATABASE_CONFIG
+        conn = mariadb.connect(**DATABASE_CONFIG)
         cursor = conn.cursor()
         
         print("📊 Loading OpenFlights dataset...")

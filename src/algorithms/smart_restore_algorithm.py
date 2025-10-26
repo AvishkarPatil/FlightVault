@@ -5,9 +5,9 @@ Binary search through temporal history to find optimal recovery timestamp
 
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
-from core.temporal_engine import TemporalEngine
-from algorithms.diff_analyzer import DiffAnalyzer
-from algorithms.health_scorer import HealthScorer
+from src.core.temporal_engine import TemporalEngine
+from src.algorithms.diff_analyzer import DiffAnalyzer
+from src.algorithms.health_scorer import HealthScorer
 
 class SmartRestorePointFinder:
     """Intelligent algorithm to find optimal restore point"""

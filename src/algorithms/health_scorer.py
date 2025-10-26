@@ -4,7 +4,7 @@ Health Scorer - Validate data quality at any timestamp
 
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple
-from core.temporal_engine import TemporalEngine
+from src.core.temporal_engine import TemporalEngine
 
 class HealthScorer:
     """Score data health and integrity at timestamps"""

@@ -12,9 +12,9 @@ from datetime import datetime, timedelta
 import logging
 import traceback
 
-from core.temporal_engine import create_engine, TemporalEngine
-from algorithms.smart_restore_algorithm import SmartRestorePointFinder
-from core.selective_restore import SelectiveRestoreEngine
+from src.core.temporal_engine import create_engine, TemporalEngine
+from src.algorithms.smart_restore_algorithm import SmartRestorePointFinder
+from src.core.selective_restore import SelectiveRestoreEngine
 
 # Configure logging
 logging.basicConfig(
@@ -531,4 +531,22 @@ async def get_database_stats(engine: TemporalEngine = Depends(get_engine)):
 
 if __name__ == "__main__":
     import uvicorn
+    import time
+    import mariadb
+    
+    # Wait for database to be ready
+    max_retries = 30
+    for i in range(max_retries):
+        try:
+            conn = mariadb.connect(**DATABASE_CONFIG)
+            conn.close()
+            print("✅ Database connection successful")
+            break
+        except Exception as e:
+            print(f"⏳ Waiting for database... ({i+1}/{max_retries})")
+            time.sleep(2)
+    else:
+        print("❌ Could not connect to database after 30 attempts")
+        exit(1)
+    
     uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")

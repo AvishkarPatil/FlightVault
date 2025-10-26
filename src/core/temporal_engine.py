@@ -172,5 +172,5 @@ class TemporalEngine:
             self.conn.close()
 
 def create_engine() -> TemporalEngine:
-    from config import DATABASE_CONFIG
+    from src.config import DATABASE_CONFIG
     return TemporalEngine(DATABASE_CONFIG)

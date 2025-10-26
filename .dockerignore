@@ -1,0 +1,33 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv
+venv/
+
+# Node
+frontend/node_modules
+frontend/.next
+frontend/out
+
+# IDE
+.vscode
+.idea
+
+# Logs
+*.log
+
+# Test files
+test_*.py
+create_*.py
+instant_*.py
+
+# OS
+.DS_Store
+Thumbs.db

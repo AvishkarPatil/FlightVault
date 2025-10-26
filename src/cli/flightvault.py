@@ -4,9 +4,9 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import argparse
 from datetime import datetime, timedelta
-from core.temporal_engine import create_engine
-from algorithms.smart_restore_algorithm import SmartRestorePointFinder
-from core.selective_restore import SelectiveRestoreEngine
+from src.core.temporal_engine import create_engine
+from src.algorithms.smart_restore_algorithm import SmartRestorePointFinder
+from src.core.selective_restore import SelectiveRestoreEngine
 
 class FlightVaultCLI:
     
