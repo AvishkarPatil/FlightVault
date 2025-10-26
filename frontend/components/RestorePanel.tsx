@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Brain, Zap, AlertTriangle, CheckCircle, Clock, BarChart3, Timer, Target } from 'lucide-react';
+import { Brain, Zap, AlertTriangle, CheckCircle, Clock, BarChart3, Timer, Target, Calendar, Settings, RotateCcw } from 'lucide-react';
 import { formatTimestamp } from '@/lib/utils';
 import { FlightVaultAPI } from '@/lib/api';
 import { RestoreSuggestion, RestoreResult } from '@/types';
@@ -17,6 +17,9 @@ export default function RestorePanel({ table, onRestoreComplete }: RestorePanelP
   const [restoring, setRestoring] = useState(false);
   const [result, setResult] = useState<RestoreResult | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [restoreMode, setRestoreMode] = useState<'smart' | 'manual'>('smart');
+  const [customTimestamp, setCustomTimestamp] = useState<string>('');
+  const [manualPreview, setManualPreview] = useState<RestoreResult | null>(null);
 
   const getSuggestion = async () => {
     setLoading(true);
@@ -31,53 +34,66 @@ export default function RestorePanel({ table, onRestoreComplete }: RestorePanelP
     }
   };
 
-  const previewRestore = async () => {
-    if (!suggestion) return;
+  const previewRestore = async (timestamp?: string) => {
+    const targetTimestamp = timestamp || (suggestion?.suggested_timestamp);
+    console.log('Preview restore called with:', { timestamp, targetTimestamp, table });
+    if (!targetTimestamp) {
+      console.log('No target timestamp, returning');
+      return;
+    }
     
     setLoading(true);
     try {
-      console.log('Making preview request with:', {
-        table,
-        timestamp: suggestion.suggested_timestamp,
-        dry_run: true
-      });
-      
+      console.log('Making API call for preview...');
       const data = await FlightVaultAPI.executeRestore(
         table,
-        suggestion.suggested_timestamp,
+        targetTimestamp,
         true // dry run
       );
-      console.log('Preview response:', data);
-      setResult({ ...data, dry_run: true });
+      console.log('Preview API response:', data);
+      
+      if (timestamp) {
+        console.log('Setting manual preview');
+        setManualPreview({ ...data, dry_run: true });
+      } else {
+        console.log('Setting smart result');
+        setResult({ ...data, dry_run: true });
+      }
     } catch (error) {
-      console.error('Preview error details:', error);
+      console.error('Preview error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      console.error('Error message:', errorMessage);
-      setResult({ 
+      const errorResult = { 
         success: false, 
         error: errorMessage,
         dry_run: true 
-      });
+      };
+      
+      if (timestamp) {
+        setManualPreview(errorResult);
+      } else {
+        setResult(errorResult);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const executeRestore = async () => {
-    if (!suggestion) return;
+  const executeRestore = async (timestamp?: string) => {
+    const targetTimestamp = timestamp || (suggestion?.suggested_timestamp);
+    if (!targetTimestamp) return;
     
     setRestoring(true);
     try {
       const data = await FlightVaultAPI.executeRestore(
         table,
-        suggestion.suggested_timestamp,
+        targetTimestamp,
         false // actual restore
       );
       setResult(data);
+      setManualPreview(null);
       setShowConfirm(false);
       
       if (data.success) {
-        // Refresh data without full page reload
         setTimeout(() => {
           onRestoreComplete();
         }, 1000);
@@ -109,11 +125,45 @@ export default function RestorePanel({ table, onRestoreComplete }: RestorePanelP
   return (
     <div className="card">
       {/* Header */}
-      <div className="flex items-center space-x-3 mb-6">
-        <Brain className="w-6 h-6 text-primary-600" />
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">Recovery Center</h2>
-          <p className="text-sm text-gray-500">Intelligent restore point analysis</p>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center space-x-3">
+          <Brain className="w-6 h-6 text-primary-600" />
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Recovery Center</h2>
+            <p className="text-sm text-gray-500">Intelligent restore point analysis</p>
+          </div>
+        </div>
+        
+        {/* Mode Toggle */}
+        <div className="flex items-center space-x-2 bg-gray-100 rounded-lg p-1">
+          <button
+            onClick={() => {
+              setRestoreMode('smart');
+              setManualPreview(null);
+            }}
+            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+              restoreMode === 'smart'
+                ? 'bg-white text-primary-600 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Brain className="w-4 h-4 inline mr-1" />
+            Smart
+          </button>
+          <button
+            onClick={() => {
+              setRestoreMode('manual');
+              setResult(null);
+            }}
+            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+              restoreMode === 'manual'
+                ? 'bg-white text-primary-600 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Calendar className="w-4 h-4 inline mr-1" />
+            Manual
+          </button>
         </div>
       </div>
 
@@ -125,7 +175,7 @@ export default function RestorePanel({ table, onRestoreComplete }: RestorePanelP
       )}
 
       {/* Smart Suggestion */}
-      {suggestion && (
+      {restoreMode === 'smart' && suggestion && (
         <div className={`p-4 rounded-lg border-2 mb-6 ${getConfidenceBg(suggestion.confidence_percentage)}`}>
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center space-x-2">
@@ -179,8 +229,99 @@ export default function RestorePanel({ table, onRestoreComplete }: RestorePanelP
         </div>
       )}
 
-      {/* Preview Results */}
-      {result && result.dry_run && (
+      {/* Manual Timestamp Input */}
+      {restoreMode === 'manual' && (
+        <div className="p-4 border-2 border-gray-200 rounded-lg mb-6">
+          <div className="flex items-center space-x-2 mb-4">
+            <Calendar className="w-5 h-5 text-primary-600" />
+            <h3 className="font-medium text-gray-900">Manual Timestamp Selection</h3>
+          </div>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Restore Point
+              </label>
+              <input
+                type="datetime-local"
+                value={customTimestamp}
+                onChange={(e) => setCustomTimestamp(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                max={new Date().toISOString().slice(0, 16)}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Select any point in time to restore the database to that exact state
+              </p>
+            </div>
+            
+            {customTimestamp && (
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => previewRestore(customTimestamp)}
+                  disabled={loading}
+                  className="btn-secondary flex-1"
+                >
+                  {loading ? 'Previewing...' : 'Preview Restore'}
+                </button>
+                <button
+                  onClick={() => setShowConfirm(true)}
+                  disabled={loading || restoring}
+                  className="btn-danger flex-1 flex items-center justify-center space-x-2"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  <span>RESTORE NOW</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Manual Preview Results */}
+      {manualPreview && manualPreview.dry_run && (
+        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-6">
+          <div className="flex items-center space-x-2 mb-3">
+            <BarChart3 className="w-5 h-5 text-blue-600" />
+            <h4 className="font-medium text-blue-900">Manual Restore Preview</h4>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="text-center p-3 bg-blue-100 rounded-lg">
+              <div className="text-lg font-bold text-blue-900">{manualPreview.records_to_restore?.toLocaleString()}</div>
+              <div className="text-xs text-blue-700">Records to Restore</div>
+            </div>
+            {manualPreview.changes_preview && (
+              <>
+                <div className="text-center p-3 bg-success-100 rounded-lg">
+                  <div className="text-lg font-bold text-success-900">{manualPreview.changes_preview.will_add}</div>
+                  <div className="text-xs text-success-700">Will Add</div>
+                </div>
+                <div className="text-center p-3 bg-warning-100 rounded-lg">
+                  <div className="text-lg font-bold text-warning-900">{manualPreview.changes_preview.will_update}</div>
+                  <div className="text-xs text-warning-700">Will Update</div>
+                </div>
+              </>
+            )}
+          </div>
+          <div className="flex items-center space-x-2 text-sm text-blue-800">
+            <Timer className="w-4 h-4" />
+            <span>Target: {formatTimestamp(customTimestamp)}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Error Result */}
+      {manualPreview && !manualPreview.dry_run && !manualPreview.success && (
+        <div className="p-4 bg-danger-50 border border-danger-200 rounded-lg mb-6">
+          <div className="flex items-center space-x-2 mb-2">
+            <AlertTriangle className="w-5 h-5 text-danger-600" />
+            <h4 className="font-medium text-danger-900">Manual Preview Failed</h4>
+          </div>
+          <p className="text-sm text-danger-800">{manualPreview.error || 'Unknown error occurred'}</p>
+        </div>
+      )}
+
+      {/* Smart Preview Results */}
+      {restoreMode === 'smart' && result && result.dry_run && (
         <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-6">
           <div className="flex items-center space-x-2 mb-3">
             <BarChart3 className="w-5 h-5 text-blue-600" />
@@ -227,7 +368,7 @@ export default function RestorePanel({ table, onRestoreComplete }: RestorePanelP
       )}
 
       {/* Error Result */}
-      {result && !result.success && (
+      {result && !result.dry_run && !result.success && (
         <div className="p-4 bg-danger-50 border border-danger-200 rounded-lg mb-6">
           <div className="flex items-center space-x-2 mb-2">
             <AlertTriangle className="w-5 h-5 text-danger-600" />
@@ -244,36 +385,39 @@ export default function RestorePanel({ table, onRestoreComplete }: RestorePanelP
         </div>
       )}
 
-      {/* Action Buttons */}
-      <div className="flex space-x-3">
-        <button
-          onClick={getSuggestion}
-          disabled={loading}
-          className="btn-secondary flex-1"
-        >
-          {loading ? 'Getting Suggestion...' : 'Refresh Suggestion'}
-        </button>
-
-        {suggestion && (
+      {/* Smart Mode Action Buttons */}
+      {restoreMode === 'smart' && (
+        <div className="flex space-x-3">
           <button
-            onClick={previewRestore}
+            onClick={getSuggestion}
             disabled={loading}
             className="btn-secondary flex-1"
           >
-            {loading ? 'Previewing...' : 'Preview Restore'}
+            {loading ? 'Getting Suggestion...' : 'Refresh Suggestion'}
           </button>
-        )}
 
-        {suggestion && (
-          <button
-            onClick={() => setShowConfirm(true)}
-            disabled={loading || restoring || suggestion.confidence_percentage < 50}
-            className="btn-danger flex-1"
-          >
-            🔴 RESTORE NOW
-          </button>
-        )}
-      </div>
+          {suggestion && (
+            <button
+              onClick={() => previewRestore()}
+              disabled={loading}
+              className="btn-secondary flex-1"
+            >
+              {loading ? 'Previewing...' : 'Preview Restore'}
+            </button>
+          )}
+
+          {suggestion && (
+            <button
+              onClick={() => setShowConfirm(true)}
+              disabled={loading || restoring || suggestion.confidence_percentage < 50}
+              className="btn-danger flex-1 flex items-center justify-center space-x-2"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span>RESTORE NOW</span>
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Confirmation Dialog */}
       {showConfirm && (
@@ -285,8 +429,9 @@ export default function RestorePanel({ table, onRestoreComplete }: RestorePanelP
             </div>
             
             <p className="text-gray-700 mb-6">
-              This will restore the database to {formatTimestamp(suggestion!.suggested_timestamp)}. 
-              This action cannot be undone.
+              This will restore the database to {formatTimestamp(
+                restoreMode === 'manual' ? customTimestamp : suggestion!.suggested_timestamp
+              )}. This action cannot be undone.
             </p>
             
             <div className="flex space-x-3">
@@ -297,7 +442,9 @@ export default function RestorePanel({ table, onRestoreComplete }: RestorePanelP
                 Cancel
               </button>
               <button
-                onClick={executeRestore}
+                onClick={() => executeRestore(
+                  restoreMode === 'manual' ? customTimestamp : undefined
+                )}
                 disabled={restoring}
                 className="btn-danger flex-1"
               >

@@ -161,25 +161,29 @@ export default function TimelineSlider({ table, onTimestampChange, currentTimest
           />
           
           {/* Timeline Markers */}
-          <div className="absolute top-0 left-0 w-full h-2 pointer-events-auto">
+          <div className="absolute top-0 left-0 w-full h-2 pointer-events-none">
             {getTimelineMarkers().map(({ position, entry, key }) => (
               <div
                 key={key}
-                className="absolute top-0 transform -translate-x-1/2 cursor-pointer group"
+                className="absolute top-0 transform -translate-x-1/2 cursor-pointer group pointer-events-auto"
                 style={{ left: `${position}%` }}
-                onClick={() => {
-                  const newValue = position;
-                  setSliderValue(newValue);
-                  onTimestampChange(sliderValueToTimestamp(newValue, hours));
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setSliderValue(position);
+                  const timestamp = sliderValueToTimestamp(position, hours);
+                  onTimestampChange(timestamp);
                 }}
               >
                 <div
-                  className={`w-3 h-3 rounded-full border-2 border-white shadow-sm transition-transform group-hover:scale-125 ${
+                  className={`w-3 h-3 rounded-full border-2 border-white shadow-lg transition-transform group-hover:scale-125 ${
                     entry.has_mass_changes
-                      ? 'bg-danger-500'
+                      ? 'bg-red-500'
                       : entry.change_count > 5
-                      ? 'bg-warning-500'
-                      : 'bg-primary-400'
+                      ? 'bg-yellow-500'
+                      : entry.change_count > 0
+                      ? 'bg-blue-500'
+                      : 'bg-gray-400'
                   }`}
                 />
                 {/* Tooltip */}
@@ -204,10 +208,12 @@ export default function TimelineSlider({ table, onTimestampChange, currentTimest
                   <div
                     className={`w-2 h-2 rounded-full ${
                       entry.has_mass_changes
-                        ? 'bg-danger-500'
+                        ? 'bg-red-500'
                         : entry.change_count > 5
-                        ? 'bg-warning-500'
-                        : 'bg-primary-400'
+                        ? 'bg-yellow-500'
+                        : entry.change_count > 0
+                        ? 'bg-blue-500'
+                        : 'bg-gray-400'
                     }`}
                   />
                   <span className="text-gray-600">

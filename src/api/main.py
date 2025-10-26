@@ -331,6 +331,7 @@ async def execute_restore(
         
         if request.dry_run:
             return {
+                'success': True,
                 'dry_run': True,
                 'table': request.table,
                 'restore_timestamp': restore_ts.isoformat(),
