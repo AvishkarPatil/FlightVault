@@ -262,7 +262,7 @@ This project uses a modular architecture with clear separation of concerns:
 
 **Key Innovation**: Binary search through 24 hours of database history in 8 iterations with 98.7% confidence scoring.ty = 'Mumbai';
 -- 2 airports deleted, affecting 156 routes
-```
+
 
 **The Recovery**:
 1. Timeline visualization shows disaster spike at 14:32:15
