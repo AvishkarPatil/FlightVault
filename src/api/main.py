@@ -15,6 +15,7 @@ import traceback
 from src.core.temporal_engine import create_engine, TemporalEngine
 from src.algorithms.smart_restore_algorithm import SmartRestorePointFinder
 from src.core.selective_restore import SelectiveRestoreEngine
+from src.config import DATABASE_CONFIG
 
 # Configure logging
 logging.basicConfig(
@@ -540,13 +541,13 @@ if __name__ == "__main__":
         try:
             conn = mariadb.connect(**DATABASE_CONFIG)
             conn.close()
-            print("✅ Database connection successful")
+            print("Database connection successful")
             break
         except Exception as e:
             print(f"⏳ Waiting for database... ({i+1}/{max_retries})")
             time.sleep(2)
     else:
-        print("❌ Could not connect to database after 30 attempts")
+        print("Could not connect to database after 30 attempts")
         exit(1)
     
     uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")

@@ -3,3 +3,4 @@ uvicorn[standard]==0.24.0
 pydantic==2.5.0
 mariadb==1.1.8
 python-multipart==0.0.6
+rich==13.7.0
