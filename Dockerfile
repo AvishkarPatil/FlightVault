@@ -1,4 +1,3 @@
-# Multi-stage build for FlightVault
 FROM node:18-alpine AS frontend-builder
 
 WORKDIR /app/frontend

@@ -4,7 +4,7 @@ services:
   mariadb:
     image: mariadb:10.11
     environment:
-      MYSQL_ROOT_PASSWORD: flightvault123
+      MYSQL_ROOT_PASSWORD: password
       MYSQL_DATABASE: flightvault
     ports:
       - "3306:3306"
@@ -22,7 +22,7 @@ services:
     environment:
       - DB_HOST=mariadb
       - DB_USER=root
-      - DB_PASSWORD=flightvault123
+      - DB_PASSWORD=password
       - DB_NAME=flightvault
     volumes:
       - ./data:/app/data

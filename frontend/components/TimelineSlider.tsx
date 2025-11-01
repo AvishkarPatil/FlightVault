@@ -16,13 +16,13 @@ export default function TimelineSlider({ table, onTimestampChange, currentTimest
   const [sliderValue, setSliderValue] = useState(100); // 100 = now
   const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
   const [loading, setLoading] = useState(false);
-  const [hours] = useState(24);
+  const [hours] = useState(120);
 
   // Load timeline data
   useEffect(() => {
     const loadTimeline = async () => {
       try {
-        const data = await FlightVaultAPI.getTimeline(table, hours);
+        const data = await FlightVaultAPI.getTimeline(table, hours) as { timeline: TimelineEntry[] };
         setTimeline(data.timeline || []);
       } catch (error) {
         console.error('Failed to load timeline:', error);

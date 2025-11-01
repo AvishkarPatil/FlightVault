@@ -1,8 +1,3 @@
-"""
-FlightVault REST API - Backend for Visual Disaster Recovery Tool
-FastAPI-based REST API for temporal database operations
-"""
-
 from fastapi import FastAPI, HTTPException, Query, Body, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -127,15 +122,17 @@ async def get_timeline(
     hours: int = Query(24, description="Hours to look back"),
     engine: TemporalEngine = Depends(get_engine)
 ):
-    """Get timeline of changes for visualization"""
+    """Get timeline of changes for visualization - powers the timeline slider in frontend"""
     try:
         if table not in ['airports', 'airlines', 'routes']:
             raise HTTPException(status_code=400, detail="Invalid table name")
         
-        end_time = datetime.now()
-        start_time = end_time - timedelta(hours=hours)
+        # Define time window for timeline analysis
+        end_time = datetime.now()  # Current time (now)
+        start_time = end_time - timedelta(hours=hours)  # X hours back
         
-        # Get audit trail
+        # Get audit trail from MariaDB system-versioned tables
+        # This contains all historical changes with timestamps
         audit_trail = engine.get_audit_trail(table, limit=1000)
         recent_changes = [
             {
@@ -144,27 +141,29 @@ async def get_timeline(
                 'valid_until': entry['valid_until'].isoformat() if entry['valid_until'] else None
             }
             for entry in audit_trail 
-            if entry['changed_at'] >= start_time
+            if entry['changed_at'] >= start_time  # Filter to requested time window
         ]
         
-        # Group by 1-minute periods for better granularity
+        # Group changes by 1-minute periods for timeline visualization
+        # This creates the dots/markers on the timeline slider
         timeline_data = []
         period_groups = {}
         
         for change in recent_changes:
-            # Group by 1-minute periods
-            period_key = change['changed_at'][:16]  # YYYY-MM-DDTHH:MM
+            # Group by 1-minute periods for optimal granularity
+            period_key = change['changed_at'][:16]  # YYYY-MM-DDTHH:MM format
             
             if period_key not in period_groups:
                 period_groups[period_key] = []
             period_groups[period_key].append(change)
         
+        # Create timeline entries for frontend visualization
         for period, changes in sorted(period_groups.items()):
             timeline_data.append({
                 'timestamp': period,
                 'change_count': len(changes),
-                'changes': changes[:10],
-                'has_mass_changes': len(changes) > 50
+                'changes': changes[:10],  # Limit to first 10 for performance
+                'has_mass_changes': len(changes) > 50  # Flag for major incidents
             })
         
         return {
@@ -188,22 +187,23 @@ async def get_state_at_timestamp(
     offset: int = Query(0, description="Offset for pagination"),
     engine: TemporalEngine = Depends(get_engine)
 ):
-    """Get table state at specific timestamp"""
+    """Get table state at specific timestamp - time travel query for data visualization"""
     try:
         if table not in ['airports', 'airlines', 'routes']:
             raise HTTPException(status_code=400, detail="Invalid table name")
         
-        # Parse timestamp
+        # Parse ISO timestamp from frontend
         try:
             ts = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid timestamp format")
         
-        # Query state at timestamp
+        # Core time-travel query: "What did the table look like at this exact moment?"
+        # Uses MariaDB's FOR SYSTEM_TIME AS OF functionality
         all_records = engine.query_as_of(table, ts)
         total_count = len(all_records)
         
-        # Apply pagination
+        # Apply pagination for large datasets (airports table can have 10k+ records)
         start_idx = offset
         end_idx = offset + limit
         records = all_records[start_idx:end_idx]
@@ -277,12 +277,13 @@ async def suggest_restore_point(
     table: str = Query(..., description="Table name"),
     engine: TemporalEngine = Depends(get_engine)
 ):
-    """Get suggested restore point using smart algorithm"""
+    """Get suggested restore point using smart algorithm - the core AI-powered feature"""
     try:
         if table not in ['airports', 'airlines', 'routes']:
             raise HTTPException(status_code=400, detail="Invalid table name")
         
-        # Run smart restore point algorithm
+        # Run the smart restore point algorithm - FlightVault's core innovation
+        # This uses binary search through 24 hours of history to find optimal restore point
         finder = SmartRestorePointFinder(engine)
         result = finder.find_optimal_restore_point(table)
         
@@ -307,28 +308,31 @@ async def execute_restore(
     request: RestoreRequest,
     engine: TemporalEngine = Depends(get_engine)
 ):
-    """Execute database restore operation"""
+    """Execute database restore operation - the main disaster recovery action"""
     try:
         logger.info(f"Restore request: {request.dict()}")
         
-        # Determine restore timestamp
+        # Determine restore timestamp - either user-specified or AI-selected
         if request.timestamp:
+            # Manual mode: user selected specific timestamp from timeline
             restore_ts = datetime.fromisoformat(request.timestamp.replace('Z', '+00:00'))
-            logger.info(f"Using specified timestamp: {restore_ts}")
+            logger.info(f"Using user-specified timestamp: {restore_ts}")
         else:
-            # Use smart algorithm
+            # Smart mode: AI algorithm selects optimal restore point
             finder = SmartRestorePointFinder(engine)
             result = finder.find_optimal_restore_point(request.table)
             restore_ts = result['optimal_timestamp']
             logger.info(f"Smart algorithm selected: {restore_ts}")
         
-        # Get data to restore
-        historical_data = engine.query_as_of(request.table, restore_ts)
-        current_data = engine.query_current(request.table)
+        # Get data states for comparison and restoration
+        historical_data = engine.query_as_of(request.table, restore_ts)  # Clean state from past
+        current_data = engine.query_current(request.table)  # Current (potentially corrupted) state
         
-        # Calculate what will be restored
+        # Calculate what changes will be made during restore
+        # This shows user exactly what will happen before execution
         diff = engine.calculate_diff(current_data, historical_data, request.table)
         
+        # Dry run mode: preview changes without executing
         if request.dry_run:
             return {
                 'success': True,
@@ -337,20 +341,21 @@ async def execute_restore(
                 'restore_timestamp': restore_ts.isoformat(),
                 'records_to_restore': len(historical_data),
                 'changes_preview': {
-                    'will_add': len(diff['added']),
-                    'will_update': len(diff['modified']),
-                    'will_remove': len(diff['deleted'])
+                    'will_add': len(diff['added']),      # Records to be added back
+                    'will_update': len(diff['modified']), # Records to be updated
+                    'will_remove': len(diff['deleted'])   # Records to be removed
                 },
-                'preview': diff
+                'preview': diff  # Detailed diff for user review
             }
         
-        # Execute restore
+        # Execute the actual restore operation
+        # This replaces current table state with historical clean state
         restore_result = engine.restore_records(request.table, historical_data)
         
         if restore_result['success']:
             logger.info(f"Restore successful: {restore_result['restored_count']} records")
             
-            # Verify final state
+            # Verify final state matches what we intended to restore
             final_data = engine.query_current(request.table)
             
             return {

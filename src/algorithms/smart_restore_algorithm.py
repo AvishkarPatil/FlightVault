@@ -1,8 +1,3 @@
-"""
-Smart Restore Point Algorithm - The Core Innovation
-Binary search through temporal history to find optimal recovery timestamp
-"""
-
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 from src.core.temporal_engine import TemporalEngine
@@ -13,9 +8,10 @@ class SmartRestorePointFinder:
     """Intelligent algorithm to find optimal restore point"""
     
     def __init__(self, engine: TemporalEngine):
-        self.engine = engine
-        self.diff_analyzer = DiffAnalyzer(engine)
-        self.health_scorer = HealthScorer(engine)
+        """Initialize the smart restore point finder with database engine and analysis tools"""
+        self.engine = engine  # Core temporal database engine for querying historical data
+        self.diff_analyzer = DiffAnalyzer(engine)  # Tool for comparing data states between timestamps
+        self.health_scorer = HealthScorer(engine)  # Tool for scoring data integrity at any timestamp
     
     def find_optimal_restore_point(self, table: str = 'airports', 
                                  disaster_type: Optional[str] = None) -> Dict:
@@ -27,24 +23,32 @@ class SmartRestorePointFinder:
         """
         
         # Step 1: Define Search Window (24 hours back)
-        end_time = datetime.now()
-        start_time = end_time - timedelta(hours=24)
+        # We search within last 24 hours as most disasters are recent and need quick recovery
+        end_time = datetime.now()  # Current time (potentially corrupted state)
+        start_time = end_time - timedelta(hours=24)  # 24 hours ago (likely clean state)
         
         print(f"🔍 Searching for optimal restore point...")
         print(f"   Search window: {start_time.strftime('%H:%M:%S')} to {end_time.strftime('%H:%M:%S')}")
         
-        # Get current corrupted state as baseline
+        # Get current corrupted state as baseline for comparison
+        # This helps us understand what we're trying to recover from
         current_state = self.engine.query_current(table)
         
-        # Step 2: Binary Search Through Time
+        # Step 2: Binary Search Through Time - Core Innovation
+        # Instead of checking every minute (1440 checks), binary search finds optimal point in ~12 iterations
+        # This is the key algorithm that makes FlightVault fast and efficient
         optimal_timestamp, search_info = self._binary_search_through_time(
             table, start_time, end_time, current_state
         )
         
         # Step 3: Validate Stability of Restore Point
+        # Ensure the selected timestamp is not in the middle of a transaction or bulk operation
+        # This prevents restoring to an inconsistent state
         stability_check = self._validate_stability(table, optimal_timestamp)
         
-        # Step 4: Calculate Final Confidence Score
+        # Step 4: Calculate Final Confidence Score (0-100%)
+        # Combines health score, stability, and boundary clarity to give user confidence in selection
+        # High confidence (>80%) means safe to restore, low confidence (<70%) needs manual review
         confidence = self._calculate_confidence(
             search_info['health_score'], 
             stability_check, 
@@ -72,27 +76,32 @@ class SmartRestorePointFinder:
         Step 2: Binary search to efficiently find disaster boundary
         """
         
-        best_timestamp = start_time
-        best_health_score = 0
-        iterations = 0
-        max_iterations = 15  # log2(1440 minutes) ≈ 11, so 15 is safe
+        # Initialize binary search variables
+        best_timestamp = start_time  # Track the best restore point found so far
+        best_health_score = 0  # Track the highest health score encountered
+        iterations = 0  # Count search iterations for performance monitoring
+        max_iterations = 15  # log2(1440 minutes) ≈ 11, so 15 provides safety margin
         
-        current_start = start_time
-        current_end = end_time
+        # Binary search boundaries - these narrow down with each iteration
+        current_start = start_time  # Left boundary of current search window
+        current_end = end_time  # Right boundary of current search window
         
-        search_log = []
+        search_log = []  # Log each iteration for debugging and analysis
         
-        # Binary search loop
-        while (current_end - current_start).total_seconds() > 300 and iterations < max_iterations:  # 5 minutes precision
+        # Binary search loop - continues until we reach 5-minute precision or max iterations
+        # 5 minutes precision is sufficient for most disaster recovery scenarios
+        while (current_end - current_start).total_seconds() > 300 and iterations < max_iterations:
             iterations += 1
             
-            # Calculate midpoint
+            # Calculate midpoint between current search boundaries
+            # This is the timestamp we'll test in this iteration
             midpoint = current_start + (current_end - current_start) / 2
             
-            # Step 3: Health Validation at This Timestamp
+            # Health Validation at This Timestamp
+            # Score data integrity (0-100) based on record count, required fields, foreign keys, etc.
             health_result = self.health_scorer.score_health(table, midpoint)
-            health_score = health_result['score']
-            validation_details = health_result.get('checks', {})
+            health_score = health_result['score']  # Overall health score (0-100)
+            validation_details = health_result.get('checks', {})  # Detailed breakdown of checks
             
             search_log.append({
                 'timestamp': midpoint,
@@ -103,14 +112,17 @@ class SmartRestorePointFinder:
             print(f"   Iteration {iterations}: {midpoint.strftime('%H:%M:%S')} - Health: {health_score}/100")
             
             # Track best point found so far
+            # We keep the timestamp with highest health score as our candidate restore point
             if health_score > best_health_score:
                 best_timestamp = midpoint
                 best_health_score = health_score
             
-            # Determine search direction
-            if health_score >= 80:  # Healthy data - search forward to find disaster start
+            # Determine search direction - this is the key binary search logic
+            if health_score >= 80:  # Healthy data (80%+ health score)
+                # Data is good here, so disaster happened later - search forward in time
                 current_start = midpoint
-            else:  # Corrupted data - search backward to find last good state
+            else:  # Corrupted data (< 80% health score)
+                # Data is corrupted here, so disaster happened earlier - search backward in time
                 current_end = midpoint
         
         # Step 4: Find Exact Disaster Boundary (minute precision)

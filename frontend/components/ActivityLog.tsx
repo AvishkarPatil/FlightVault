@@ -24,7 +24,7 @@ export default function ActivityLog({ table }: ActivityLogProps) {
     const loadActivities = async () => {
       setLoading(true);
       try {
-        const data = await FlightVaultAPI.getTimeline(table, 168); // 7 days
+        const data = await FlightVaultAPI.getTimeline(table, 168) as { timeline: ActivityEntry[] }; // 7 days
         setActivities(data.timeline || []);
       } catch (error) {
         console.error('Failed to load activities:', error);

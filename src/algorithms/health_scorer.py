@@ -1,7 +1,3 @@
-"""
-Health Scorer - Validate data quality at any timestamp
-"""
-
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple
 from src.core.temporal_engine import TemporalEngine

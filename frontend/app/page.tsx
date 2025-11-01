@@ -21,7 +21,7 @@ export default function Home() {
   useEffect(() => {
     const loadTables = async () => {
       try {
-        const data = await FlightVaultAPI.getTables();
+        const data = await FlightVaultAPI.getTables() as { tables: TableInfo[] };
         setTables(data.tables || []);
       } catch (error) {
         console.error('Failed to load tables:', error);
@@ -198,7 +198,7 @@ export default function Home() {
                     }
                   </span>
                   <span>
-                    Recent changes: {selectedTableInfo.recent_changes}
+                    Recent changes: {selectedTableInfo.recent_changes || 0}
                   </span>
                 </div>
               )}

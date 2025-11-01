@@ -2,7 +2,9 @@
 
 <h3 align="center">Visual Disaster Recovery Tool using MariaDB System-Versioned Tables</h3>
 
-<p align="center"><b>FlightVault</b> transforms database disasters from hours-long crises into seconds-long fixes through visual time-travel and intelligent recovery algorithms. Built for aviation databases, it provides complete temporal tracking, smart restore point detection, and surgical data recovery capabilities.</p><br>
+<p align="center"><b>FlightVault</b> transforms database disasters from hours-long crises into seconds-long fixes through visual time-travel and intelligent recovery algorithms. Built for aviation databases, it provides complete temporal tracking, smart restore point detection, and surgical data recovery capabilities.</p>
+
+<p align="center"><em>Submitted by Team FyreBird</em></p><br>
 
 <div align="center"> 
   
@@ -25,6 +27,41 @@
 
 </div>
 <br>
+
+### Demonstrations
+
+**📸 [View Screenshots](SCREENSHOTS.md)** - Interface overview and feature demonstrations<br>
+**🔴 [Watch Full Demo on YouTube](https://youtu.be/XXW_1QKWpnc)** - Complete walkthrough of FlightVault's disaster recovery capabilities <br>
+
+
+<div align="center">
+  <a href="https://youtu.be/XXW_1QKWpnc">
+    <img src="https://img.shields.io/badge/YouTube-Demo_Video-red?style=for-the-badge&logo=youtube&logoColor=white" alt="YouTube Demo Video" />
+  </a>
+</div>
+
+<table style="width: 100%;">
+<tr>
+<th align="center">CLI Interface Demo</th>
+<th align="center">Web Interface Demo</th>
+</tr>
+<tr>
+<td align="center"><video width="100%" controls><source src="assets/Video/flightvault_cli.mp4" type="video/mp4">Your browser does not support the video tag.</video></td>
+<td align="center"><video width="100%" controls><source src="assets/Video/flightvault_web.mp4" type="video/mp4">Your browser does not support the video tag.</video></td>
+</tr>
+</table>
+<br>
+
+### ⚡ Quick Start
+
+```bash
+# Quick Start (Manual)
+pip install -r requirements.txt
+python setup/database_setup.py
+python setup/data_loader.py
+python start_api.py       # API: http://localhost:8000
+cd frontend && npm install && npm run dev   # UI: http://localhost:3000
+```
 
 ## Table of Contents
 
@@ -56,6 +93,50 @@
 - Docker deployment support
 
 ## Architecture
+
+```mermaid
+flowchart LR
+  %% Styling
+  classDef ui fill:#111827,stroke:#374151,stroke-width:1px,color:#F9FAFB;
+  classDef api fill:#0EA5E9,stroke:#075985,stroke-width:1px,color:#FFFFFF;
+  classDef core fill:#10B981,stroke:#065F46,stroke-width:1px,color:#FFFFFF;
+  classDef db fill:#334155,stroke:#0F172A,stroke-width:1px,color:#E2E8F0;
+  classDef svc fill:#6366F1,stroke:#312E81,stroke-width:1px,color:#EEF2FF;
+  classDef ext fill:#F59E0B,stroke:#92400E,stroke-width:1px,color:#111827;
+
+  %% Client
+  User[User]:::ui --> UI[Next.js Web UI<br/>Timeline • Diff • Restore]:::ui
+  User --> CLI[Python CLI<br/>status • timeline • diff • recover]:::ui
+
+  %% API Layer
+  UI -->|HTTP/JSON| API[(FastAPI REST API<br/>/health /timeline /diff /suggest-restore /restore)]:::api
+  CLI -->|Local or HTTP| API
+
+  %% Core Services
+  API --> TE[Temporal Engine<br/>FOR SYSTEM_TIME AS OF]:::core
+  API --> ALG[Smart Restore Algorithm<br/>Binary Search + Health Score]:::core
+  API --> REST[Recovery Executor<br/>Dry-run • Transactional Restore]:::core
+  API --> DIFF[Diff Analyzer<br/>Added • Deleted • Modified]:::core
+
+  %% Database
+  TE --> DB[(MariaDB 11<br/>System-Versioned Tables<br/>WITH SYSTEM VERSIONING)]:::db
+  ALG --> DB
+  REST --> DB
+  DIFF --> DB
+
+  %% Data Source
+  OF[OpenFlights Dataset<br/>airports • airlines • routes]:::ext -->|load| DB
+
+  %% Optional Infra
+  subgraph Optional
+    CORS[CORS and Auth future]:::svc
+    Docker[Docker Compose<br/>mariadb • api • ui]:::svc
+  end
+  CORS -.-> API
+  Docker -. orchestrates .- API
+  Docker -. orchestrates .- DB
+  Docker -. orchestrates .- UI
+```
 
 This project demonstrates integration between:
 - **MariaDB System-Versioned Tables** for temporal data storage with automatic history tracking
@@ -199,6 +280,8 @@ python src/cli/flightvault.py selective
 python src/cli/flightvault.py algorithm
 ```
 
+**📖 [View Detailed CLI Commands](CLI_COMMANDS.md)** - Complete command reference with parameters and examples
+
 ### Web Interface
 
 The web interface provides intuitive disaster recovery with:
@@ -287,6 +370,10 @@ This project uses a modular architecture with clear separation of concerns:
 - **Multi-Database Support**: PostgreSQL, MySQL, and other temporal database implementations
 
 **Community contributions welcome!**
+
+## Troubleshooting
+
+**Connection refused** → Ensure MariaDB running, check `DB_HOST`/`DB_PORT`, run `docker-compose ps`
 
 ## License
 

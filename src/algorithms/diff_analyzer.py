@@ -1,7 +1,3 @@
-"""
-Diff Analyzer - Compare timestamps and detect changes
-"""
-
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional
 from src.core.temporal_engine import TemporalEngine

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { GitCompare, Plus, Minus, Edit, Calendar } from 'lucide-react';
 import { formatTimestamp } from '@/lib/utils';
 import { FlightVaultAPI } from '@/lib/api';
-import { DiffResult } from '@/types';
+import { DiffResult, ChangeDetail } from '@/types';
 
 interface CompareStatesProps {
   table: string;
@@ -30,7 +30,7 @@ export default function CompareStates({ table }: CompareStatesProps) {
     
     setLoading(true);
     try {
-      const data = await FlightVaultAPI.getDiff(table, beforeTime, afterTime);
+      const data = await FlightVaultAPI.getDiff(table, beforeTime, afterTime) as { diff: DiffResult };
       setDiff(data.diff);
     } catch (error) {
       console.error('Failed to load diff:', error);
@@ -184,7 +184,7 @@ export default function CompareStates({ table }: CompareStatesProps) {
                     {record.after.name || `ID: ${record.after[Object.keys(record.after)[0]]}`}
                   </div>
                   <div className="space-y-1">
-                    {record.changes.slice(0, 3).map((change, changeIndex) => (
+                    {record.changes.slice(0, 3).map((change: ChangeDetail, changeIndex) => (
                       <div key={changeIndex} className="text-xs">
                         <span className="font-medium text-warning-800">{change.field}:</span>
                         <div className="flex items-center space-x-2 mt-1">

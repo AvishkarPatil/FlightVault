@@ -30,10 +30,22 @@ export interface TimelineEntry {
   has_mass_changes: boolean;
 }
 
+export interface ChangeDetail {
+  field: string;
+  before: any;
+  after: any;
+}
+
+export interface ModifiedRecord {
+  before: any;
+  after: any;
+  changes: ChangeDetail[];
+}
+
 export interface DiffResult {
   added: any[];
   deleted: any[];
-  modified: any[];
+  modified: ModifiedRecord[];
   summary: {
     total_added: number;
     total_deleted: number;
@@ -52,7 +64,13 @@ export interface RestoreSuggestion {
 export interface RestoreResult {
   success: boolean;
   records_restored?: number;
+  records_to_restore?: number;
   final_count?: number;
   execution_time?: string;
   error?: string;
+  dry_run?: boolean;
+  changes_preview?: {
+    will_add: number;
+    will_update: number;
+  };
 }

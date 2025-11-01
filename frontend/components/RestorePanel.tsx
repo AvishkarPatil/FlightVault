@@ -25,7 +25,7 @@ export default function RestorePanel({ table, onRestoreComplete }: RestorePanelP
     setLoading(true);
     setResult(null);
     try {
-      const data = await FlightVaultAPI.getSuggestRestore(table);
+      const data = await FlightVaultAPI.getSuggestRestore(table) as RestoreSuggestion;
       setSuggestion(data);
     } catch (error) {
       console.error('Failed to get suggestion:', error);
@@ -49,7 +49,7 @@ export default function RestorePanel({ table, onRestoreComplete }: RestorePanelP
         table,
         targetTimestamp,
         true // dry run
-      );
+      ) as RestoreResult;
       console.log('Preview API response:', data);
       
       if (timestamp) {
@@ -88,7 +88,7 @@ export default function RestorePanel({ table, onRestoreComplete }: RestorePanelP
         table,
         targetTimestamp,
         false // actual restore
-      );
+      ) as RestoreResult;
       setResult(data);
       setManualPreview(null);
       setShowConfirm(false);

@@ -11,8 +11,10 @@ interface DataDisplayProps {
   timestamp: string;
 }
 
+type TableRecord = Airport | any; // Generic type for different table records
+
 export default function DataDisplay({ table, timestamp }: DataDisplayProps) {
-  const [data, setData] = useState<Airport[]>([]);
+  const [data, setData] = useState<TableRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(0);
@@ -27,7 +29,7 @@ export default function DataDisplay({ table, timestamp }: DataDisplayProps) {
           timestamp,
           limit,
           currentPage * limit
-        );
+        ) as { records: TableRecord[]; total_count: number };
         setData(response.records || []);
         setTotalCount(response.total_count || 0);
       } catch (error) {
@@ -50,17 +52,31 @@ export default function DataDisplay({ table, timestamp }: DataDisplayProps) {
   }, [timestamp]);
 
   const handleExport = () => {
-    const csv = [
-      ['ID', 'Name', 'City', 'Country', 'IATA', 'ICAO'].join(','),
-      ...data.map(row => [
-        row.airport_id,
-        `"${row.name}"`,
-        `"${row.city}"`,
-        `"${row.country}"`,
-        row.iata_code,
-        row.icao_code
-      ].join(','))
-    ].join('\n');
+    const headers = table === 'airports' 
+      ? ['ID', 'Name', 'City', 'Country', 'IATA', 'ICAO']
+      : ['ID', 'Name', 'Country', 'Active'];
+    
+    const rows = data.map(row => {
+      if (table === 'airports') {
+        return [
+          row.airport_id || row.id,
+          `"${row.name || ''}"`,
+          `"${row.city || ''}"`,
+          `"${row.country || ''}"`,
+          row.iata_code || '',
+          row.icao_code || ''
+        ].join(',');
+      } else {
+        return [
+          row.airline_id || row.route_id || row.id,
+          `"${row.name || ''}"`,
+          `"${row.country || ''}"`,
+          row.active || ''
+        ].join(',');
+      }
+    });
+    
+    const csv = [headers.join(','), ...rows].join('\n');
 
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -131,36 +147,39 @@ export default function DataDisplay({ table, timestamp }: DataDisplayProps) {
                 </tr>
               </thead>
               <tbody>
-                {data.map((row, index) => (
-                  <tr
-                    key={row.airport_id}
-                    className={`border-b border-gray-100 hover:bg-gray-50 ${
-                      index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'
-                    }`}
-                  >
-                    <td className="py-3 px-4 text-sm font-mono text-gray-600">
-                      {row.airport_id}
-                    </td>
-                    <td className="py-3 px-4 text-sm font-medium text-gray-900">
-                      {row.name}
-                    </td>
-                    <td className="py-3 px-4 text-sm text-gray-700">
-                      {row.city}
-                    </td>
-                    <td className="py-3 px-4 text-sm text-gray-700">
-                      {row.country}
-                    </td>
-                    <td className="py-3 px-4 text-sm font-mono text-gray-600">
-                      {row.iata_code || '-'}
-                    </td>
-                    <td className="py-3 px-4 text-sm font-mono text-gray-600">
-                      {row.icao_code || '-'}
-                    </td>
-                    <td className="py-3 px-4 text-sm font-mono text-gray-600">
-                      {row.latitude?.toFixed(2)}, {row.longitude?.toFixed(2)}
-                    </td>
-                  </tr>
-                ))}
+                {data.map((row: any, index) => {
+                  const rowId = row.airport_id || row.airline_id || row.route_id || row.id || index;
+                  return (
+                    <tr
+                      key={rowId}
+                      className={`border-b border-gray-100 hover:bg-gray-50 ${
+                        index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'
+                      }`}
+                    >
+                      <td className="py-3 px-4 text-sm font-mono text-gray-600">
+                        {rowId}
+                      </td>
+                      <td className="py-3 px-4 text-sm font-medium text-gray-900">
+                        {row.name || '-'}
+                      </td>
+                      <td className="py-3 px-4 text-sm text-gray-700">
+                        {row.city || '-'}
+                      </td>
+                      <td className="py-3 px-4 text-sm text-gray-700">
+                        {row.country || '-'}
+                      </td>
+                      <td className="py-3 px-4 text-sm font-mono text-gray-600">
+                        {row.iata_code || '-'}
+                      </td>
+                      <td className="py-3 px-4 text-sm font-mono text-gray-600">
+                        {row.icao_code || '-'}
+                      </td>
+                      <td className="py-3 px-4 text-sm font-mono text-gray-600">
+                        {row.latitude && row.longitude ? `${row.latitude.toFixed(2)}, ${row.longitude.toFixed(2)}` : '-'}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
