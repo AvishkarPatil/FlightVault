@@ -40,16 +40,9 @@
   </a>
 </div>
 
-<table style="width: 100%;">
-<tr>
-<th align="center">CLI Interface Demo</th>
-<th align="center">Web Interface Demo</th>
-</tr>
-<tr>
-<td align="center"><video width="100%" controls><source src="assets/Video/flightvault_cli.mp4" type="video/mp4">Your browser does not support the video tag.</video></td>
-<td align="center"><video width="100%" controls><source src="assets/Video/flightvault_web.mp4" type="video/mp4">Your browser does not support the video tag.</video></td>
-</tr>
-</table>
+**Local Demo Videos Available:**
+- `assets/Video/flightvault_cli.mp4` - CLI Interface Demo
+- `assets/Video/flightvault_web.mp4` - Web Interface Demo
 <br>
 
 ### ⚡ Quick Start
