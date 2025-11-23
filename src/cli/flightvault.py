@@ -47,14 +47,84 @@ class FlightVaultCLI:
                 return False
     
     def show_header(self):
-        header = Text("FlightVault CLI", style="bold cyan")
-        subtitle = Text("Visual Disaster Recovery Tool", style="dim")
-        panel = Panel(
-            Align.center(f"{header}\n{subtitle}"),
-            box=box.DOUBLE,
-            border_style="cyan"
-        )
-        self.console.print(panel)
+        ascii_art = """
+ ███████╗██╗     ██╗ ██████╗ ██╗  ██╗████████╗██╗   ██╗ █████╗ ██╗   ██╗██╗  ████████╗
+ ██╔════╝██║     ██║██╔════╝ ██║  ██║╚══██╔══╝██║   ██║██╔══██╗██║   ██║██║  ╚══██╔══╝
+ █████╗  ██║     ██║██║  ███╗███████║   ██║   ██║   ██║███████║██║   ██║██║     ██║   
+ ██╔══╝  ██║     ██║██║   ██║██╔══██║   ██║   ╚██╗ ██╔╝██╔══██║██║   ██║██║     ██║   
+ ██║     ███████╗██║╚██████╔╝██║  ██║   ██║    ╚████╔╝ ██║  ██║╚██████╔╝███████╗██║   
+ ╚═╝     ╚══════╝╚═╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝     ╚═══╝  ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝   
+"""
+        
+        self.console.print(Text(ascii_art, style="bold cyan"))
+        self.console.print(Align.center(Text("Visual Disaster Recovery Tool using MariaDB System-Versioned Tables", style="dim white")))
+        self.console.print(Align.center(Text("Built by Team FyreBird", style="bold yellow")))
+        self.console.print("\n" + "═" * 80 + "\n")
+    
+    def interactive_mode(self):
+        """Interactive CLI mode with command prompt"""
+        self.console.print("[bold green]Interactive Mode[/bold green] - Type 'help' for commands or 'exit' to quit\n")
+        
+        while True:
+            try:
+                # Blinking cursor effect
+                command = self.console.input("[bold cyan]FlightVault>[/bold cyan] ")
+                
+                if command.lower() in ['exit', 'quit', 'q']:
+                    self.console.print("[yellow]Goodbye![/yellow]")
+                    break
+                elif command.lower() in ['help', 'h']:
+                    self.show_help()
+                elif command.lower() == 'status':
+                    self.status_check()
+                elif command.lower().startswith('timeline'):
+                    parts = command.split()
+                    table = parts[1] if len(parts) > 1 else 'airports'
+                    hours = int(parts[2]) if len(parts) > 2 else 24
+                    self.timeline_explorer(table, hours)
+                elif command.lower().startswith('diff'):
+                    parts = command.split()
+                    table = parts[1] if len(parts) > 1 else 'airports'
+                    self.smart_diff_viewer(table)
+                elif command.lower().startswith('recover'):
+                    parts = command.split()
+                    table = parts[1] if len(parts) > 1 else 'airports'
+                    dry_run = '--dry-run' in command or '--execute' not in command
+                    self.intelligent_recovery(table, dry_run)
+                elif command.lower() == 'algorithm':
+                    self.smart_algorithm_details()
+                elif command.lower() == 'selective':
+                    self.selective_restore()
+                elif command.strip() == '':
+                    continue
+                else:
+                    self.console.print(f"[red]Unknown command: {command}[/red]")
+                    self.console.print("Type 'help' for available commands")
+                
+                self.console.print()  # Add spacing
+                
+            except KeyboardInterrupt:
+                self.console.print("\n[yellow]Use 'exit' to quit[/yellow]")
+            except EOFError:
+                break
+    
+    def show_help(self):
+        """Show available commands in interactive mode"""
+        help_table = Table(show_header=True, header_style="bold magenta", title="Available Commands")
+        help_table.add_column("Command", style="cyan")
+        help_table.add_column("Description", style="white")
+        help_table.add_column("Example", style="dim")
+        
+        help_table.add_row("status", "System health check", "status")
+        help_table.add_row("timeline [table] [hours]", "View change timeline", "timeline airports 24")
+        help_table.add_row("diff [table]", "Compare database states", "diff airports")
+        help_table.add_row("recover [table] [--dry-run|--execute]", "Intelligent recovery", "recover airports --dry-run")
+        help_table.add_row("algorithm", "Show algorithm analysis", "algorithm")
+        help_table.add_row("selective", "Selective restore preview", "selective")
+        help_table.add_row("help", "Show this help", "help")
+        help_table.add_row("exit", "Quit FlightVault", "exit")
+        
+        self.console.print(help_table)
     
     def status_check(self):
         self.console.print("\n[bold cyan]System Status Check[/bold cyan]")
@@ -617,6 +687,9 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
     
+    # Add interactive mode flag
+    parser.add_argument('-i', '--interactive', action='store_true', help='Start interactive mode')
+    
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
     
     # Status command
@@ -652,16 +725,15 @@ def main():
     
     args = parser.parse_args()
     
-    if not args.command:
-        parser.print_help()
-        return
-    
     # Initialize CLI
     if not cli.initialize():
         return
     
     try:
-        if args.command == 'status':
+        # Check for interactive mode or no command
+        if args.interactive or not args.command:
+            cli.interactive_mode()
+        elif args.command == 'status':
             cli.status_check()
         elif args.command == 'timeline':
             cli.timeline_explorer(args.table, args.hours)
